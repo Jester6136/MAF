@@ -1,7 +1,7 @@
 from __future__ import absolute_import, division, print_function
 import os
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 import argparse
 import csv
 import logging
@@ -241,7 +241,11 @@ class MNERProcessor(DataProcessor):
         return self._create_examples(data, imgs, auxlabels, "test")
 
     def get_labels(self):
-        return ["O",'B-GENDER', 'I-GENDER','B-TRANSPORTATION', 'I-TRANSPORTATION','B-JOB', 'I-JOB','B-SYMPTOM_AND_DISEASE', 'I-SYMPTOM_AND_DISEASE','B-NAME', 'I-NAME', 'B-ORGANIZATION', 'I-ORGANIZATION', 'B-AGE', 'I-AGE', 'B-LOCATION', 'I-LOCATION', 'B-DATE', 'I-DATE', 'B-PATIENT_ID', 'I-PATIENT_ID', 'B-OTHER', 'I-OTHER', "X", "[CLS]", "[SEP]"]
+        return ['I-ADDRESS', 'I-SKILL', 'B-DATETIME', 'O', 'B-EMAIL', 'B-EVENT', 'B-MISCELLANEOUS', 'I-ORGANIZATION', 'I-PRODUCT', 'B-ORGANIZATION', 'B-ADDRESS', 'I-URL', 'I-MISCELLANEOUS', 'I-QUANTITY', 'B-LOCATION', 'I-PHONENUMBER', 'B-SKILL', 'B-QUANTITY', 'I-EMAIL', 'B-PHONENUMBER', 'B-PRODUCT', 'B-PERSON', 'I-EVENT', 'I-DATETIME', 'I-PERSON', 'I-LOCATION', 'B-IP', 'B-PERSONTYPE', 'I-PERSONTYPE', 'B-URL', 'I-IP','X','[CLS]','[SEP]']
+        
+        # return ['O', 'B-LOCATION', 'B-DATE', 'B-PATIENT_ID', 'B-AGE', 'B-ORGANIZATION', 'I-ORGANIZATION', 'B-NAME', 'I-DATE', 'B-JOB', 'I-LOCATION', 'B-SYMPTOM_AND_DISEASE', 'I-SYMPTOM_AND_DISEASE', 'B-TRANSPORTATION', 'B-GENDER', 'I-TRANSPORTATION', 'I-JOB', 'I-NAME', 'I-AGE', 'I-PATIENT_ID','X','[CLS]','[SEP]']
+        # return ["O","B-DATETIME","I-DATETIME","B-DATETIME-DATE","I-DATETIME-DATE","I-EVENT-SPORT","B-EVENT-SPORT","B-QUANTITY-NUM","I-QUANTITY-NUM","B-PERSON","I-PERSON","I-IP","B-IP","B-PERSONTYPE","I-PERSONTYPE","B-EVENT-CUL","I-EVENT-CUL","B-LOCATION-GPE","I-LOCATION-GPE","B-LOCATION-STRUC","I-LOCATION-STRUC","X","[CLS]", "[SEP]"]
+        # return ["O",'B-TRANSPORTATION', 'I-TRANSPORTATION', 'B-ORGANIZATION', 'I-ORGANIZATION', 'B-LOCATION', 'I-LOCATION', 'B-DATE', 'I-DATE', "X", "[CLS]", "[SEP]"]
 
     def get_auxlabels(self):
         return ["O", "B", "I", "X", "[CLS]", "[SEP]"]
@@ -348,11 +352,12 @@ def convert_mm_examples_to_features(examples, label_list, auxlabel_list, max_seq
     count = 0
 
     transform = transforms.Compose([
-        transforms.RandomCrop(crop_size),  # args.crop_size, by default it is set to be 224
-        transforms.RandomHorizontalFlip(),
-        transforms.ToTensor(),
-        transforms.Normalize((0.485, 0.456, 0.406),
-                             (0.229, 0.224, 0.225))])
+            transforms.Resize([256, 256]),
+            transforms.RandomCrop(crop_size),  # args.crop_size, by default it is set to be 224
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            transforms.Normalize((0.485, 0.456, 0.406),
+                                (0.229, 0.224, 0.225))])
 
     for (ex_index, example) in enumerate(examples):
         textlist = example.text_a.split(' ')
@@ -421,25 +426,26 @@ def convert_mm_examples_to_features(examples, label_list, auxlabel_list, max_seq
             image = image_process(image_path, transform)
         except:
             count += 1
+            print('error: ',image_path)
             # print('image has problem!')
-            image_path_fail = os.path.join(path_img, '17_06_4705.jpg')
-            image = image_process(image_path_fail, transform)
+            # image_path_fail = os.path.join(path_img, '17_06_4705.jpg')
+            # image = image_process(image_path_fail, transform)
+        else:
+            if ex_index < 2:
+                logger.info("*** Example ***")
+                logger.info("guid: %s" % (example.guid))
+                logger.info("tokens: %s" % " ".join(
+                    [str(x) for x in tokens]))
+                logger.info("input_ids: %s" % " ".join([str(x) for x in input_ids]))
+                logger.info("input_mask: %s" % " ".join([str(x) for x in input_mask]))
+                logger.info(
+                    "segment_ids: %s" % " ".join([str(x) for x in segment_ids]))
+                logger.info("label: %s" % " ".join([str(x) for x in label_ids]))
+                logger.info("auxlabel: %s" % " ".join([str(x) for x in auxlabel_ids]))
 
-        if ex_index < 2:
-            logger.info("*** Example ***")
-            logger.info("guid: %s" % (example.guid))
-            logger.info("tokens: %s" % " ".join(
-                [str(x) for x in tokens]))
-            logger.info("input_ids: %s" % " ".join([str(x) for x in input_ids]))
-            logger.info("input_mask: %s" % " ".join([str(x) for x in input_mask]))
-            logger.info(
-                "segment_ids: %s" % " ".join([str(x) for x in segment_ids]))
-            logger.info("label: %s" % " ".join([str(x) for x in label_ids]))
-            logger.info("auxlabel: %s" % " ".join([str(x) for x in auxlabel_ids]))
-
-        features.append(
-            MMInputFeatures(input_ids=input_ids, input_mask=input_mask, added_input_mask=added_input_mask,
-                            segment_ids=segment_ids, img_feat=image, label_id=label_ids, auxlabel_id=auxlabel_ids))
+            features.append(
+                MMInputFeatures(input_ids=input_ids, input_mask=input_mask, added_input_mask=added_input_mask,
+                                segment_ids=segment_ids, img_feat=image, label_id=label_ids, auxlabel_id=auxlabel_ids))
 
     print('the number of problematic samples: ' + str(count))
 
@@ -602,10 +608,12 @@ def main():
 
     processors = {
         "twitter2015": MNERProcessor,
-        "twitter2017": MNERProcessor
+        "twitter2017": MNERProcessor,
+        "sonba": MNERProcessor
     }
 
     if args.local_rank == -1 or args.no_cuda:
+        import torch
         device = torch.device("cuda" if torch.cuda.is_available() and not args.no_cuda else "cpu")
         n_gpu = torch.cuda.device_count()
     else:
@@ -683,7 +691,7 @@ def main():
         print('please define your MNER Model')
 
     net = getattr(resnet, 'resnet152')()
-    net.load_state_dict(torch.load(os.path.join(args.resnet_root, 'consresnet.pth')))
+    net.load_state_dict(torch.load(os.path.join(args.resnet_root, 'resnet152.pth')))
     encoder = myResnet(net, args.fine_tune_cnn, device)
 
     if args.fp16:
@@ -1022,14 +1030,6 @@ def main():
         reverse_label_map = {label: i for i, label in enumerate(label_list, 1)}
         acc, f1, p, r = evaluate(y_pred_idx, y_true_idx, sentence_list, reverse_label_map)
         print("Overall: ", p, r, f1)
-        per_f1, per_p, per_r = evaluate_each_class(y_pred_idx, y_true_idx, sentence_list, reverse_label_map, 'PER')
-        print("Person: ", per_p, per_r, per_f1)
-        loc_f1, loc_p, loc_r = evaluate_each_class(y_pred_idx, y_true_idx, sentence_list, reverse_label_map, 'LOC')
-        print("Location: ", loc_p, loc_r, loc_f1)
-        org_f1, org_p, org_r = evaluate_each_class(y_pred_idx, y_true_idx, sentence_list, reverse_label_map, 'ORG')
-        print("Organization: ", org_p, org_r, org_f1)
-        misc_f1, misc_p, misc_r = evaluate_each_class(y_pred_idx, y_true_idx, sentence_list, reverse_label_map, 'MISC')
-        print("Miscellaneous: ", misc_p, misc_r, misc_f1)
 
         output_eval_file = os.path.join(args.output_dir, "eval_results.txt")
         with open(output_eval_file, "w") as writer:
@@ -1037,10 +1037,6 @@ def main():
             logger.info("\n%s", report)
             writer.write(report)
             writer.write("Overall: " + str(p) + ' ' + str(r) + ' ' + str(f1) + '\n')
-            writer.write("Person: " + str(per_p) + ' ' + str(per_r) + ' ' + str(per_f1) + '\n')
-            writer.write("Location: " + str(loc_p) + ' ' + str(loc_r) + ' ' + str(loc_f1) + '\n')
-            writer.write("Organization: " + str(org_p) + ' ' + str(org_r) + ' ' + str(org_f1) + '\n')
-            writer.write("Miscellaneous: " + str(misc_p) + ' ' + str(misc_r) + ' ' + str(misc_f1) + '\n')
 
 
 if __name__ == "__main__":
